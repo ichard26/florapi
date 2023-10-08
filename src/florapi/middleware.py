@@ -1,5 +1,9 @@
-import time
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 import sqlite3
+import time
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
@@ -13,9 +17,9 @@ if TYPE_CHECKING:
     WebSocketScope = Any
 
 from starlette.background import BackgroundTask
-from starlette.responses import Response
-from starlette.requests import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from florapi import utc_now
 from florapi.sqlite import SQLiteConnection
@@ -41,7 +45,7 @@ class TimedLogMiddleware(BaseHTTPMiddleware):
         *,
         sqlite_factory: Callable[[], SQLiteConnection],
         sqlite_table: str = "requests",
-        extra_columns: dict[str, str] = {},
+        extra_columns: dict[str, str] = {},  # noqa: B006
         hook: Callable[[Request, Response, dict], None] = (lambda *_: None),
     ) -> None:
         super().__init__(app)

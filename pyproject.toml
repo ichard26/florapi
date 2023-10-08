@@ -32,3 +32,8 @@ dynamic = ["version", "description"]
 
 [project.urls]
 Repository = "https://github.com/ichard26/florapi"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+extra_standard_library = []

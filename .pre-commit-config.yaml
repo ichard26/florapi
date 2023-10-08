@@ -24,6 +24,6 @@ repos:
       - id: add-license-header
         name: add-license-header
         language: python
-        entry: python -m scripts.license
+        entry: python -m scripts.license --yes
         additional_dependencies: [click]
         types: [file]
