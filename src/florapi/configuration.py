@@ -19,8 +19,8 @@ def TimeDelta(value: str) -> timedelta:
 
 
 class Options:
-    def __init__(self, prefix: str) -> None:
-        self.prefix = prefix + "_"
+    def __init__(self, prefix: str = "") -> None:
+        self.prefix = prefix + "_" if prefix else ""
         self.errors = []
 
     def __call__(self, name: str, type: Callable[[Any], T], default: Any = _MISSING) -> T:
