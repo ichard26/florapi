@@ -24,18 +24,16 @@ from starlette.responses import Response
 from florapi import utc_now
 from florapi.sqlite import SQLiteConnection
 
-LOG_SQLITE_SCHEMA = """
-CREATE TABLE "{0}" (
-    "datetime"   TEXT PRIMARY KEY NOT NULL,
-    "ip"         TEXT,
-    "useragent"  TEXT,
-    "referer"    TEXT,
-    "verb"       TEXT NOT NULL,
-    "path"       TEXT NOT NULL,
-    "status"       INTEGER NOT NULL,
-    "duration"   REAL NOT NULL{extras}
-);
-""".strip()
+LOG_SCHEMA = {
+    "datetime":   "TEXT PRIMARY KEY NOT NULL",
+    "ip":         "TEXT",
+    "useragent":  "TEXT",
+    "referer":    "TEXT",
+    "verb":       "TEXT NOT NULL",
+    "path":       "TEXT NOT NULL",
+    "status":     "INTEGER NOT NULL",
+    "duration":   "REAL NOT NULL"
+}
 
 
 class TimedLogMiddleware(BaseHTTPMiddleware):
@@ -51,13 +49,8 @@ class TimedLogMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.sqlite_table = sqlite_table
         self.sqlite_factory = sqlite_factory
+        self.sqlite_schema = {**LOG_SCHEMA, **extra_columns}
         self.hook = hook
-        if extra_columns:
-            columns_sql = ",\n".join([f'"{col}" {type_}' for col, type_ in extra_columns.items()])
-            extras_sql = f",\n{columns_sql}"
-        else:
-            extras_sql = ""
-        self.schema = LOG_SQLITE_SCHEMA.format(sqlite_table, extras=extras_sql)
 
     async def dispatch(self, request: Request, call_next: Awaitable) -> Response:
         start_time = time.perf_counter()
@@ -77,7 +70,7 @@ class TimedLogMiddleware(BaseHTTPMiddleware):
                     if db.existing_table(self.sqlite_table):
                         raise
 
-                    db.execute(self.schema)
+                    db.create_table(self.sqlite_table, self.sqlite_schema)
                     insert_in(db)
             finally:
                 db.close()

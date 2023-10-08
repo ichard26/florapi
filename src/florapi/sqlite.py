@@ -12,6 +12,12 @@ from typing import Union
 
 from florapi import flatten
 
+CREATE_TABLE_SQL_TEMPLATE = """
+CREATE TABLE "{name}" (
+{contents}
+){extra};
+""".strip()
+
 
 def register_adaptors() -> None:
     sqlite3.register_adapter(datetime, adapt_datetime_iso)
@@ -52,6 +58,20 @@ class SQLiteConnection(sqlite3.Connection):
         columns_string = ",".join(columns)
         values_string = ",".join("?" * len(columns))
         self.executemany(f"INSERT INTO {table}({columns_string}) VALUES({values_string});", values)
+
+    def create_table(
+        self,
+        name: str,
+        columns: Mapping[str, str],
+        *,
+        constraints: Sequence[str] = (),
+        exists_ok: bool = False
+    ) -> None:
+        lines = [f'    "{col}" {type_}' for col, type_ in columns.items()]
+        lines.extend(constraints)
+        extra = "IF NOT EXISTS" if exists_ok else ""
+        sql = CREATE_TABLE_SQL_TEMPLATE.format(name=name, contents=",\n".join(lines), extra=extra)
+        self.execute(sql)
 
     def existing_table(self, table: str) -> bool:
         """Check if a table exists in the database."""

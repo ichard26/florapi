@@ -10,6 +10,7 @@ from typing import Final, Optional
 from pydantic import BaseModel
 
 from florapi import utc_now
+from florapi.sqlite import SQLiteConnection
 
 RateLimits = dict[int, int]
 
@@ -27,14 +28,26 @@ class RateLimiter:
     DAY: Final = 1440
 
     class SQLiteBackend:
-        def __init__(self, db: sqlite3.Connection, max_windows: int = 5000) -> None:
+        def __init__(self, db: SQLiteConnection, table: str = "_ratelimits", max_windows: int = 5000) -> None:
             self.db = db
+            self.table = table
             self.max_windows = max_windows
             self.commit = db.commit
+            if not db.existing_table(table):
+                db.create_table(
+                    table,
+                    columns={
+                        "key": "TEXT NOT NULL",
+                        "duration": "INTEGER NOT NULL",
+                        "value": "TEXT NOT NULL",
+                        "expiry": "TEXT NOT NULL",
+                    },
+                    constraints=['PRIMARY KEY("key", "expiry")']
+                )
 
         def get_window(self, key: str, duration: int, limit: int) -> Optional[RateLimitWindow]:
             cur = self.db.execute(
-                "SELECT rowid, value, expiry FROM ratelimits WHERE key = ? AND duration = ?;",
+                f"SELECT rowid, value, expiry FROM {self.table} WHERE key = ? AND duration = ?;",
                 [key, duration]
             )
             if row := cur.fetchone():
@@ -42,26 +55,24 @@ class RateLimiter:
             return None
 
         def create_window(self, key: str, duration: int, limit: int, expiry: datetime) -> RateLimitWindow:
-            self.db.execute(
-                "INSERT INTO ratelimits(key, duration, value, expiry) VALUES(?, ?, ?, ?);",
-                [key, duration, 0, expiry]
-            )
+            db_entry = {"key": key, "duration": duration, "value": 0, "expiry": expiry}
+            self.db.insert(self.table, db_entry)
             return RateLimitWindow(duration=duration, limit=limit, value=0, expiry=expiry)
 
         def update_window_key(self, key: str, by: int) -> None:
             self.db.execute(
-                "UPDATE ratelimits SET value = value + ? WHERE key = ?;", [by, key]
+                f"UPDATE {self.table} SET value = value + ? WHERE key = ?;", [by, key]
             )
 
         def delete_window(self, key: str, duration: int) -> None:
             self.db.execute(
-                "DELETE FROM ratelimits WHERE key = ? AND duration = ?;", [key, duration]
+                f"DELETE FROM {self.table} WHERE key = ? AND duration = ?;", [key, duration]
             )
 
         def prune(self) -> int:
-            count = self.db.execute("SELECT COUNT(*) FROM ratelimits;").fetchone()[0]
+            count = self.db.execute(f"SELECT COUNT(*) FROM {self.table};").fetchone()[0]
             if (to_prune := count - self.max_windows) > 0:
-                self.db.execute("DELETE FROM ratelimits ORDER BY expiry LIMIT ?;", [to_prune])
+                self.db.execute(f"DELETE FROM {self.table} ORDER BY expiry LIMIT ?;", [to_prune])
 
     def __init__(self, key_prefix: str, limits: RateLimits, db: sqlite3.Connection) -> None:
         self.key_prefix = key_prefix + ":"
