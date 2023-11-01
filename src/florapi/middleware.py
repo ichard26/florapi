@@ -43,6 +43,7 @@ class TimedLogMiddleware(BaseHTTPMiddleware):
         *,
         sqlite_factory: Callable[[], SQLiteConnection],
         sqlite_table: str = "requests",
+        sqlite_autoclose: bool = True,
         extra_columns: dict[str, str] = {},  # noqa: B006
         hook: Callable[[Request, Response, dict], None] = (lambda *_: None),
     ) -> None:
@@ -50,6 +51,7 @@ class TimedLogMiddleware(BaseHTTPMiddleware):
         self.sqlite_table = sqlite_table
         self.sqlite_factory = sqlite_factory
         self.sqlite_schema = {**LOG_SCHEMA, **extra_columns}
+        self.sqlite_autoclose = sqlite_autoclose
         self.hook = hook
 
     async def dispatch(self, request: Request, call_next: Awaitable) -> Response:
@@ -73,7 +75,8 @@ class TimedLogMiddleware(BaseHTTPMiddleware):
                     db.create_table(self.sqlite_table, self.sqlite_schema)
                     insert_in(db)
             finally:
-                db.close()
+                if self.sqlite_autoclose:
+                    db.close()
 
         entry = {
             "datetime": utc_now(),

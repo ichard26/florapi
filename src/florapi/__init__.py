@@ -5,7 +5,7 @@
 """florapi - A personal toolkit for building FastAPI applications."""
 
 __author__ = "Richard Si"
-__version__ = "2023.10.8.1"
+__version__ = "2023.10.31.1"
 
 import itertools
 from collections.abc import Iterable

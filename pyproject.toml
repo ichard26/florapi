@@ -26,6 +26,7 @@ requires-python = ">=3.9"
 dependencies = [
     "pydantic",
     "starlette",
+    "typing-extensions",
 ]
 
 dynamic = ["version", "description"]
@@ -36,4 +37,4 @@ Repository = "https://github.com/ichard26/florapi"
 [tool.isort]
 profile = "black"
 line_length = 100
-extra_standard_library = []
+extra_standard_library = ["typing_extensions"]
