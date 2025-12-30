@@ -103,6 +103,8 @@ class SQLiteConnection(sqlite3.Connection):
         extra = "IF NOT EXISTS" if exists_ok else ""
         sql = CREATE_TABLE_SQL_TEMPLATE.format(name=name, contents=",\n".join(lines), extra=extra)
         self.execute(sql)
+        # Invalidate table cache.
+        self._tables = None
 
     def existing_table(self, table: str) -> bool:
         """Check if a table exists in the database."""
